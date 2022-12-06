@@ -1,2 +1,2 @@
-# AzurePermiereIntegrations
-Backup and private playground for developting on Azure.
+# Recorded Future Azure Integrations
+Previews and POCs for next to come on Azure.
