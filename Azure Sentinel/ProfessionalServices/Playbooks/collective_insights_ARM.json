@@ -1,0 +1,1026 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters":
+    {
+        "PlaybookName":
+        {
+            "defaultValue": "RecordedFuture-Defender_Collective_Insights",
+            "type": "string"
+        },
+        "Recorded Future API Key":
+        {
+            "type": "string",
+            "metadata":
+            {
+                "description": "Enter value for Recorded Future API key"
+            }
+        },
+        "Client ID":
+        {
+            "type": "string",
+            "metadata":
+            {
+                "description": "Enter app registration Client ID. Must have SecurityAlert.Read.All"
+            }
+        },
+        "Client Secret":
+        {
+            "type": "string",
+            "metadata":
+            {
+                "description": "Enter app registration Client Secret"
+            }
+        }
+    },
+    "variables":
+    {},
+    "resources":
+    [
+        {
+            "type": "Microsoft.Logic/workflows",
+            "apiVersion": "2017-07-01",
+            "location": "eastus",
+            "name": "[parameters('PlaybookName')]",
+            "properties":
+            {
+                "state": "Enabled",
+                "definition":
+                {
+                    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters":
+                    {
+                        "Recorded Future API Token":
+                        {
+                            "defaultValue": "[parameters('Recorded Future API Key')]",
+                            "type": "string"
+                        },
+                        "Client ID":
+                        {
+                            "defaultValue": "[parameters('Client ID')]",
+                            "type": "string"
+                        },
+                        "Client Secret":
+                        {
+                            "defaultValue": "[parameters('Client Secret')]",
+                            "type": "string"
+                        }
+                    },
+                    "triggers":
+                    {
+                        "Recurrence":
+                        {
+                            "recurrence":
+                            {
+                                "frequency": "Hour",
+                                "interval": 24
+                            },
+                            "evaluatedRecurrence":
+                            {
+                                "frequency": "Hour",
+                                "interval": 24
+                            },
+                            "type": "Recurrence"
+                        }
+                    },
+                    "actions":
+                    {
+                        "For_Each_Incident":
+                        {
+                            "foreach": "@body('Parse_JSON')?['value']",
+                            "actions":
+                            {
+                                "For_Each_Entity":
+                                {
+                                    "foreach": "@items('For_Each_Incident')?['evidence']",
+                                    "actions":
+                                    {
+                                        "Switch":
+                                        {
+                                            "runAfter":
+                                            {},
+                                            "cases":
+                                            {
+                                                "Case_File_Evidence":
+                                                {
+                                                    "case": "#microsoft.graph.security.fileEvidence",
+                                                    "actions":
+                                                    {
+                                                        "HTTP":
+                                                        {
+                                                            "runAfter":
+                                                            {},
+                                                            "type": "Http",
+                                                            "inputs":
+                                                            {
+                                                                "body":
+                                                                {
+                                                                    "data":
+                                                                    [
+                                                                        {
+                                                                            "detection":
+                                                                            {
+                                                                                "type": "playbook"
+                                                                            },
+                                                                            "incident":
+                                                                            {
+                                                                                "id": "@{items('For_each_incident')?['providerAlertId']}",
+                                                                                "type": "@{items('For_each_incident')?['serviceSource']}"
+                                                                            },
+                                                                            "ioc":
+                                                                            {
+                                                                                "type": "hash",
+                                                                                "value": "@{items('For_each_entity')?['fileDetails']?['sha256']}"
+                                                                            },
+                                                                            "mitre_codes": "@items('For_each_incident')?['mitreTechniques']",
+                                                                            "timestamp": "@{items('For_each_incident')?['createdDateTime']}"
+                                                                        }
+                                                                    ]
+                                                                },
+                                                                "headers":
+                                                                {
+                                                                    "X-RFToken": "@parameters('Recorded Future API Token')",
+                                                                    "User-Agent": "MDE-Collective_Insights_Logic_App"
+                                                                },
+                                                                "method": "POST",
+                                                                "uri": "https://api.recordedfuture.com/collective-insights/detections"
+                                                            }
+                                                        }
+                                                    }
+                                                },
+                                                "Case_IP_Address":
+                                                {
+                                                    "case": "#microsoft.graph.security.ipEvidence",
+                                                    "actions":
+                                                    {
+                                                        "HTTP_2":
+                                                        {
+                                                            "runAfter":
+                                                            {},
+                                                            "type": "Http",
+                                                            "inputs":
+                                                            {
+                                                                "body":
+                                                                {
+                                                                    "data":
+                                                                    [
+                                                                        {
+                                                                            "detection":
+                                                                            {
+                                                                                "type": "playbook"
+                                                                            },
+                                                                            "incident":
+                                                                            {
+                                                                                "id": "@{items('For_each_incident')?['providerAlertId']}",
+                                                                                "type": "@{items('For_each_incident')?['serviceSource']}"
+                                                                            },
+                                                                            "ioc":
+                                                                            {
+                                                                                "type": "ip",
+                                                                                "value": "@{items('For_each_entity')?['ipAddress']}"
+                                                                            },
+                                                                            "mitre_codes": "@items('For_each_incident')?['mitreTechniques']",
+                                                                            "timestamp": "@{items('For_each_incident')?['createdDateTime']}"
+                                                                        }
+                                                                    ]
+                                                                },
+                                                                "headers":
+                                                                {
+                                                                    "X-RFToken": "@parameters('Recorded Future API Token')",
+                                                                    "User-Agent": "MDE-Collective_Insights_Logic_App"
+                                                                },
+                                                                "method": "POST",
+                                                                "uri": "https://api.recordedfuture.com/collective-insights/detections"
+                                                            }
+                                                        }
+                                                    }
+                                                },
+                                                "Case_URL":
+                                                {
+                                                    "case": "#microsoft.graph.security.urlEvidence",
+                                                    "actions":
+                                                    {
+                                                        "Is_URL,_Not_Domain":
+                                                        {
+                                                            "actions":
+                                                            {
+                                                                "HTTP_3":
+                                                                {
+                                                                    "runAfter":
+                                                                    {},
+                                                                    "type": "Http",
+                                                                    "inputs":
+                                                                    {
+                                                                        "body":
+                                                                        {
+                                                                            "data":
+                                                                            [
+                                                                                {
+                                                                                    "detection":
+                                                                                    {
+                                                                                        "type": "playbook"
+                                                                                    },
+                                                                                    "incident":
+                                                                                    {
+                                                                                        "id": "@{items('For_each_incident')?['providerAlertId']}",
+                                                                                        "type": "@{items('For_each_incident')?['serviceSource']}"
+                                                                                    },
+                                                                                    "ioc":
+                                                                                    {
+                                                                                        "type": "url",
+                                                                                        "value": "@{items('For_each_entity')?['url']}"
+                                                                                    },
+                                                                                    "mitre_codes": "@items('For_each_incident')?['mitreTechniques']",
+                                                                                    "timestamp": "@{items('For_each_incident')?['createdDateTime']}"
+                                                                                }
+                                                                            ]
+                                                                        },
+                                                                        "headers":
+                                                                        {
+                                                                            "X-RFToken": "@parameters('Recorded Future API Token')",
+                                                                            "User-Agent": "MDE-Collective_Insights_Logic_App"
+                                                                        },
+                                                                        "method": "POST",
+                                                                        "uri": "https://api.recordedfuture.com/collective-insights/detections"
+                                                                    }
+                                                                }
+                                                            },
+                                                            "runAfter":
+                                                            {},
+                                                            "else":
+                                                            {
+                                                                "actions":
+                                                                {
+                                                                    "HTTP_4":
+                                                                    {
+                                                                        "runAfter":
+                                                                        {},
+                                                                        "type": "Http",
+                                                                        "inputs":
+                                                                        {
+                                                                            "body":
+                                                                            {
+                                                                                "data":
+                                                                                [
+                                                                                    {
+                                                                                        "detection":
+                                                                                        {
+                                                                                            "type": "playbook"
+                                                                                        },
+                                                                                        "incident":
+                                                                                        {
+                                                                                            "id": "@{items('For_each_incident')?['providerAlertId']}",
+                                                                                            "type": "@{items('For_each_incident')?['serviceSource']}"
+                                                                                        },
+                                                                                        "ioc":
+                                                                                        {
+                                                                                            "type": "domain",
+                                                                                            "value": "@{items('For_each_entity')?['url']}"
+                                                                                        },
+                                                                                        "mitre_codes": "@items('For_each_incident')?['mitreTechniques']",
+                                                                                        "timestamp": "@{items('For_each_incident')?['createdDateTime']}"
+                                                                                    }
+                                                                                ]
+                                                                            },
+                                                                            "headers":
+                                                                            {
+                                                                                "X-RFToken": "@parameters('Recorded Future API Token')",
+                                                                                "User-Agent": "MDE-Collective_Insights_Logic_App"
+                                                                            },
+                                                                            "method": "POST",
+                                                                            "uri": "https://api.recordedfuture.com/collective-insights/detections"
+                                                                        }
+                                                                    }
+                                                                }
+                                                            },
+                                                            "expression":
+                                                            {
+                                                                "and":
+                                                                [
+                                                                    {
+                                                                        "contains":
+                                                                        [
+                                                                            "@{items('For_each_entity')?['url']}",
+                                                                            "//"
+                                                                        ]
+                                                                    }
+                                                                ]
+                                                            },
+                                                            "type": "If"
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            "default":
+                                            {
+                                                "actions":
+                                                {}
+                                            },
+                                            "expression": "@items('For_Each_Entity')?['@odata.type']",
+                                            "type": "Switch"
+                                        }
+                                    },
+                                    "runAfter":
+                                    {},
+                                    "type": "Foreach"
+                                }
+                            },
+                            "runAfter":
+                            {
+                                "Parse_JSON":
+                                [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "Foreach"
+                        },
+                        "Get_Defender_alerts":
+                        {
+                            "runAfter":
+                            {},
+                            "type": "Http",
+                            "inputs":
+                            {
+                                "authentication":
+                                {
+                                    "audience": "https://graph.microsoft.com/",
+                                    "clientId": "@parameters('Client ID')",
+                                    "secret": "@parameters('Client Secret')",
+                                    "tenant": "[subscription().tenantId]",
+                                    "type": "ActiveDirectoryOAuth"
+                                },
+                                "method": "GET",
+                                "queries":
+                                {
+                                    "$filter": "createdDateTime gt @{addDays(utcNow(), -1)}"
+                                },
+                                "uri": "https://graph.microsoft.com/v1.0/security/alerts_v2"
+                            },
+                            "runtimeConfiguration":
+                            {
+                                "secureData":
+                                {
+                                    "properties":
+                                    [
+                                        "inputs"
+                                    ]
+                                }
+                            }
+                        },
+                        "Parse_JSON":
+                        {
+                            "runAfter":
+                            {
+                                "Get_Defender_alerts":
+                                [
+                                    "Succeeded"
+                                ]
+                            },
+                            "type": "ParseJson",
+                            "inputs":
+                            {
+                                "content": "@body('Get_Defender_alerts')",
+                                "schema":
+                                {
+                                    "properties":
+                                    {
+                                        "@@odata.context":
+                                        {
+                                            "type":
+                                            [
+                                                "string",
+                                                "null"
+                                            ]
+                                        },
+                                        "value":
+                                        {
+                                            "items":
+                                            {
+                                                "properties":
+                                                {
+                                                    "actorDisplayName":
+                                                    {},
+                                                    "alertWebUrl":
+                                                    {
+                                                        "type":
+                                                        [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "assignedTo":
+                                                    {},
+                                                    "category":
+                                                    {
+                                                        "type":
+                                                        [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "classification":
+                                                    {},
+                                                    "comments":
+                                                    {
+                                                        "type": "array"
+                                                    },
+                                                    "createdDateTime":
+                                                    {
+                                                        "type":
+                                                        [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "description":
+                                                    {
+                                                        "type":
+                                                        [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "detectionSource":
+                                                    {
+                                                        "type":
+                                                        [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "detectorId":
+                                                    {
+                                                        "type":
+                                                        [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "determination":
+                                                    {},
+                                                    "evidence":
+                                                    {
+                                                        "items":
+                                                        {
+                                                            "properties":
+                                                            {
+                                                                "@@odata.type":
+                                                                {
+                                                                    "type":
+                                                                    [
+                                                                        "string",
+                                                                        "null"
+                                                                    ]
+                                                                },
+                                                                "azureAdDeviceId":
+                                                                {},
+                                                                "countryLetterCode":
+                                                                {},
+                                                                "createdDateTime":
+                                                                {
+                                                                    "type":
+                                                                    [
+                                                                        "string",
+                                                                        "null"
+                                                                    ]
+                                                                },
+                                                                "defenderAvStatus":
+                                                                {
+                                                                    "type":
+                                                                    [
+                                                                        "string",
+                                                                        "null"
+                                                                    ]
+                                                                },
+                                                                "detailedRoles":
+                                                                {
+                                                                    "type": "array"
+                                                                },
+                                                                "detectionStatus":
+                                                                {
+                                                                    "type":
+                                                                    [
+                                                                        "string",
+                                                                        "null"
+                                                                    ]
+                                                                },
+                                                                "deviceDnsName":
+                                                                {
+                                                                    "type":
+                                                                    [
+                                                                        "string",
+                                                                        "null"
+                                                                    ]
+                                                                },
+                                                                "fileName":
+                                                                {
+                                                                    "type":
+                                                                    [
+                                                                        "string",
+                                                                        "null"
+                                                                    ]
+                                                                },
+                                                                "filePath":
+                                                                {
+                                                                    "type":
+                                                                    [
+                                                                        "string",
+                                                                        "null"
+                                                                    ]
+                                                                },
+                                                                "filePublisher":
+                                                                {
+                                                                    "type":
+                                                                    [
+                                                                        "string",
+                                                                        "null"
+                                                                    ]
+                                                                },
+                                                                "fileSize":
+                                                                {
+                                                                    "type":
+                                                                    [
+                                                                        "string",
+                                                                        "null"
+                                                                    ]
+                                                                },
+                                                                "firstSeenDateTime":
+                                                                {
+                                                                    "type":
+                                                                    [
+                                                                        "string",
+                                                                        "null"
+                                                                    ]
+                                                                },
+                                                                "healthStatus":
+                                                                {
+                                                                    "type":
+                                                                    [
+                                                                        "string",
+                                                                        "null"
+                                                                    ]
+                                                                },
+                                                                "imageFile":
+                                                                {
+                                                                    "properties":
+                                                                    {
+                                                                        "fileName":
+                                                                        {
+                                                                            "type":
+                                                                            [
+                                                                                "string",
+                                                                                "null"
+                                                                            ]
+                                                                        },
+                                                                        "filePath":
+                                                                        {
+                                                                            "type":
+                                                                            [
+                                                                                "string",
+                                                                                "null"
+                                                                            ]
+                                                                        },
+                                                                        "filePublisher":
+                                                                        {
+                                                                            "type":
+                                                                            [
+                                                                                "string",
+                                                                                "null"
+                                                                            ]
+                                                                        },
+                                                                        "fileSize":
+                                                                        {
+                                                                            "type": "integer"
+                                                                        },
+                                                                        "issuer":
+                                                                        {},
+                                                                        "sha1":
+                                                                        {
+                                                                            "type":
+                                                                            [
+                                                                                "string",
+                                                                                "null"
+                                                                            ]
+                                                                        },
+                                                                        "sha256":
+                                                                        {
+                                                                            "type":
+                                                                            [
+                                                                                "string",
+                                                                                "null"
+                                                                            ]
+                                                                        },
+                                                                        "signer":
+                                                                        {}
+                                                                    },
+                                                                    "type": "object"
+                                                                },
+                                                                "ipAddress":
+                                                                {
+                                                                    "type":
+                                                                    [
+                                                                        "string",
+                                                                        "null"
+                                                                    ]
+                                                                },
+                                                                "ipInterfaces":
+                                                                {
+                                                                    "type": "array"
+                                                                },
+                                                                "issuer":
+                                                                {
+                                                                    "type":
+                                                                    [
+                                                                        "string",
+                                                                        "null"
+                                                                    ]
+                                                                },
+                                                                "loggedOnUsers":
+                                                                {
+                                                                    "items":
+                                                                    {
+                                                                        "properties":
+                                                                        {
+                                                                            "accountName":
+                                                                            {
+                                                                                "type":
+                                                                                [
+                                                                                    "string",
+                                                                                    "null"
+                                                                                ]
+                                                                            },
+                                                                            "domainName":
+                                                                            {
+                                                                                "type":
+                                                                                [
+                                                                                    "string",
+                                                                                    "null"
+                                                                                ]
+                                                                            }
+                                                                        },
+                                                                        "required":
+                                                                        [
+                                                                            "accountName",
+                                                                            "domainName"
+                                                                        ],
+                                                                        "type": "object"
+                                                                    },
+                                                                    "type": "array"
+                                                                },
+                                                                "mdeDeviceId":
+                                                                {
+                                                                    "type":
+                                                                    [
+                                                                        "string",
+                                                                        "null"
+                                                                    ]
+                                                                },
+                                                                "onboardingStatus":
+                                                                {
+                                                                    "type":
+                                                                    [
+                                                                        "string",
+                                                                        "null"
+                                                                    ]
+                                                                },
+                                                                "osBuild":
+                                                                {
+                                                                    "type": "integer"
+                                                                },
+                                                                "osPlatform":
+                                                                {
+                                                                    "type":
+                                                                    [
+                                                                        "string",
+                                                                        "null"
+                                                                    ]
+                                                                },
+                                                                "parentProcessCreationDateTime":
+                                                                {
+                                                                    "type":
+                                                                    [
+                                                                        "string",
+                                                                        "null"
+                                                                    ]
+                                                                },
+                                                                "parentProcessId":
+                                                                {
+                                                                    "type": "integer"
+                                                                },
+                                                                "parentProcessImageFile":
+                                                                {},
+                                                                "processCommandLine":
+                                                                {
+                                                                    "type":
+                                                                    [
+                                                                        "string",
+                                                                        "null"
+                                                                    ]
+                                                                },
+                                                                "processCreationDateTime":
+                                                                {
+                                                                    "type":
+                                                                    [
+                                                                        "string",
+                                                                        "null"
+                                                                    ]
+                                                                },
+                                                                "processId":
+                                                                {
+                                                                    "type": "integer"
+                                                                },
+                                                                "rbacGroupId":
+                                                                {
+                                                                    "type": "integer"
+                                                                },
+                                                                "rbacGroupName":
+                                                                {},
+                                                                "remediationStatus":
+                                                                {
+                                                                    "type":
+                                                                    [
+                                                                        "string",
+                                                                        "null"
+                                                                    ]
+                                                                },
+                                                                "remediationStatusDetails":
+                                                                {},
+                                                                "riskScore":
+                                                                {
+                                                                    "type":
+                                                                    [
+                                                                        "string",
+                                                                        "null"
+                                                                    ]
+                                                                },
+                                                                "roles":
+                                                                {
+                                                                    "type": "array"
+                                                                },
+                                                                "sha1":
+                                                                {
+                                                                    "type":
+                                                                    [
+                                                                        "string",
+                                                                        "null"
+                                                                    ]
+                                                                },
+                                                                "sha256":
+                                                                {
+                                                                    "type":
+                                                                    [
+                                                                        "string",
+                                                                        "null"
+                                                                    ]
+                                                                },
+                                                                "signer":
+                                                                {
+                                                                    "type":
+                                                                    [
+                                                                        "string",
+                                                                        "null"
+                                                                    ]
+                                                                },
+                                                                "tags":
+                                                                {
+                                                                    "type": "array"
+                                                                },
+                                                                "url":
+                                                                {
+                                                                    "type":
+                                                                    [
+                                                                        "string",
+                                                                        "null"
+                                                                    ]
+                                                                },
+                                                                "userAccount":
+                                                                {
+                                                                    "properties":
+                                                                    {
+                                                                        "accountName":
+                                                                        {
+                                                                            "type":
+                                                                            [
+                                                                                "string",
+                                                                                "null"
+                                                                            ]
+                                                                        },
+                                                                        "azureAdUserId":
+                                                                        {},
+                                                                        "displayName":
+                                                                        {},
+                                                                        "domainName":
+                                                                        {
+                                                                            "type":
+                                                                            [
+                                                                                "string",
+                                                                                "null"
+                                                                            ]
+                                                                        },
+                                                                        "userPrincipalName":
+                                                                        {},
+                                                                        "userSid":
+                                                                        {
+                                                                            "type":
+                                                                            [
+                                                                                "string",
+                                                                                "null"
+                                                                            ]
+                                                                        }
+                                                                    },
+                                                                    "type": "object"
+                                                                },
+                                                                "verdict":
+                                                                {
+                                                                    "type":
+                                                                    [
+                                                                        "string",
+                                                                        "null"
+                                                                    ]
+                                                                },
+                                                                "version":
+                                                                {
+                                                                    "type":
+                                                                    [
+                                                                        "string",
+                                                                        "null"
+                                                                    ]
+                                                                },
+                                                                "vmMetadata":
+                                                                {}
+                                                            },
+                                                            "required":
+                                                            [
+                                                                "@@odata.type"
+                                                            ],
+                                                            "type": "object"
+                                                        },
+                                                        "type": "array"
+                                                    },
+                                                    "firstActivityDateTime":
+                                                    {
+                                                        "type":
+                                                        [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "id":
+                                                    {
+                                                        "type":
+                                                        [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "incidentId":
+                                                    {
+                                                        "type":
+                                                        [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "incidentWebUrl":
+                                                    {
+                                                        "type":
+                                                        [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "lastActivityDateTime":
+                                                    {
+                                                        "type":
+                                                        [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "lastUpdateDateTime":
+                                                    {
+                                                        "type":
+                                                        [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "mitreTechniques":
+                                                    {
+                                                        "type": "array"
+                                                    },
+                                                    "providerAlertId":
+                                                    {
+                                                        "type":
+                                                        [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "recommendedActions":
+                                                    {
+                                                        "type":
+                                                        [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "resolvedDateTime":
+                                                    {},
+                                                    "serviceSource":
+                                                    {
+                                                        "type":
+                                                        [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "severity":
+                                                    {
+                                                        "type":
+                                                        [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "status":
+                                                    {
+                                                        "type":
+                                                        [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "tenantId":
+                                                    {
+                                                        "type":
+                                                        [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    },
+                                                    "threatDisplayName":
+                                                    {},
+                                                    "threatFamilyName":
+                                                    {},
+                                                    "title":
+                                                    {
+                                                        "type":
+                                                        [
+                                                            "string",
+                                                            "null"
+                                                        ]
+                                                    }
+                                                },
+                                                "required":
+                                                [
+                                                    "id",
+                                                    "providerAlertId",
+                                                    "incidentId",
+                                                    "status",
+                                                    "severity",
+                                                    "classification",
+                                                    "determination",
+                                                    "serviceSource",
+                                                    "detectionSource",
+                                                    "detectorId",
+                                                    "tenantId",
+                                                    "title",
+                                                    "description",
+                                                    "recommendedActions",
+                                                    "category",
+                                                    "assignedTo",
+                                                    "alertWebUrl",
+                                                    "incidentWebUrl",
+                                                    "actorDisplayName",
+                                                    "threatDisplayName",
+                                                    "threatFamilyName",
+                                                    "mitreTechniques",
+                                                    "createdDateTime",
+                                                    "lastUpdateDateTime",
+                                                    "resolvedDateTime",
+                                                    "firstActivityDateTime",
+                                                    "lastActivityDateTime",
+                                                    "comments",
+                                                    "evidence"
+                                                ],
+                                                "type": "object"
+                                            },
+                                            "type": "array"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "outputs":
+                    {}
+                },
+                "parameters":
+                {}
+            }
+        }
+    ]
+}
