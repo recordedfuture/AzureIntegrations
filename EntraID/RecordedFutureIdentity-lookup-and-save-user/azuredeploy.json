@@ -28,7 +28,7 @@
     },
     "parameters": {
          "PlaybookName": {
-            "defaultValue": "RFI-lookup-and-save-user",
+            "defaultValue": "RecordedFutureIdentity-lookup-and-save-user",
             "type": "string"
         }
     },
