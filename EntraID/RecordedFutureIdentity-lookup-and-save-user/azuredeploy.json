@@ -63,7 +63,7 @@
                         },
                         "lookup_lookback_days_default": {
                             "type": "Int",
-                            "defaultValue": "-14"
+                            "defaultValue": -14
                         },
                         "lookup_results_log_analytics_custom_log_name_default": {
                             "type": "String",
