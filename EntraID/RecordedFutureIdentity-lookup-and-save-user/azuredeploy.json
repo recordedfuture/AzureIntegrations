@@ -36,18 +36,6 @@
             "defaultValue": "RFI-lookup-and-save-user",
             "type": "string"
         },
-        "lookup_lookback_days_default": {
-            "type": "int",
-            "metadata": {
-                "description": "Enter value for lookup_lookback_days_default"
-            }
-        },
-        "lookup_results_log_analytics_custom_log_name_default": {
-            "type": "string",
-            "metadata": {
-                "description": "Enter value for lookup_results_log_analytics_custom_log_name_default"
-            }
-        },
         "IdentityCustomConnectorName": {
             "defaultValue": "RecordedFuture-IdentityCustomConnector",
             "type": "string",
@@ -75,11 +63,11 @@
                         },
                         "lookup_lookback_days_default": {
                             "type": "Int",
-                            "defaultValue": "[parameters('lookup_lookback_days_default')]"
+                            "defaultValue": "-14"
                         },
                         "lookup_results_log_analytics_custom_log_name_default": {
                             "type": "String",
-                            "defaultValue": "[parameters('lookup_results_log_analytics_custom_log_name_default')]"
+                            "defaultValue": "RecordedFutureIdentity_UsersLookupResults_CL"
                         }
                     },
                     "triggers": {
