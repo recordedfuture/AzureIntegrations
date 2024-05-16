@@ -345,7 +345,7 @@
                             "IdentityConnectorUpdate": {
                                 "connectionId": "[resourceId('Microsoft.Web/connections', variables('IdentityconnectorupdateConnectionName'))]",
                                 "connectionName": "[variables('IdentityconnectorupdateConnectionName')]",
-                                "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/customApis/', parameters('IdentityCustomConnectorName'))]"
+                                "id": "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Web/customApis/', parameters('IdentityCustomConnectorName'))]"
                             },
                             "azureloganalyticsdatacollector_1": {
                                 "connectionId": "[resourceId('Microsoft.Web/connections', variables('AzureloganalyticsdatacollectorConnectionName'))]",
@@ -383,14 +383,14 @@
                 "displayName": "[variables('IdentityconnectorupdateConnectionName')]",
                 "customParameterValues": {},
                 "api": {
-                    "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/customApis/', parameters('IdentityCustomConnectorName'))]"
+                    "id": "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Web/customApis/', parameters('IdentityCustomConnectorName'))]"
                 }
             }
         },
         {
             "type": "Microsoft.Web/connections",
             "apiVersion": "2016-06-01",
-            "name": "[variables('AzureloganalyticsdatacollectorConnectionName')]",
+        "name": "[variables('AzureloganalyticsdatacollectorConnectionName')]",
             "location": "[resourceGroup().location]",
             "kind": "V1",
             "properties": {
