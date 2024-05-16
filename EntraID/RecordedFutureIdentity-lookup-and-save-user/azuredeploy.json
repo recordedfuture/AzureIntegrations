@@ -383,7 +383,7 @@
                 "displayName": "[variables('IdentityconnectorupdateConnectionName')]",
                 "customParameterValues": {},
                 "api": {
-                    "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/customApis/' parameters('IdentityCustomConnectorName'))]"
+                    "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', resourceGroup().location, '/customApis/', parameters('IdentityCustomConnectorName'))]"
                 }
             }
         },
